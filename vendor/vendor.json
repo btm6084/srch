@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "SV54KpXkNc0BdXZLe/P5bi3Z+C0=",
+			"path": "github.com/btm6084/utilities/fileUtil",
+			"revision": "08da41f83698857b143091f20ed1a4a3ad4b8d28",
+			"revisionTime": "2018-02-15T18:36:25Z"
+		}
+	],
+	"rootPath": "github.com/btm6084/srch"
+}
