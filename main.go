@@ -2,14 +2,19 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
 
+	homedir "github.com/mitchellh/go-homedir"
+
 	"github.com/btm6084/utilities/fileUtil"
+	"github.com/btm6084/utilities/inarray"
 )
 
 var (
@@ -24,10 +29,21 @@ var (
 	searchTermColor = "\x1b[30;42m$1\x1b[0m"
 	lineNumColor    = "\x1b[93m%d%s\x1b[0m"
 
+	ignoreDirs []string
+
 	outlock sync.Mutex
 )
 
+// Config contains the structure of the configuration file located at /home/$USER/.srchrc/config.json
+type Config struct {
+	IgnoreDirs []string `json:"ignore-dirs"`
+}
+
 func main() {
+	// Set up configuration
+	home, _ := homedir.Dir()
+	config := getConfig(home + "/.srchrc/config.json")
+
 	// Parse option flags
 	i := flag.Bool("i", false, "Case insensitive search")
 	v := flag.Bool("v", false, "Return lines that do not match the search term")
@@ -35,6 +51,7 @@ func main() {
 	f := flag.Bool("follow", false, "Follow symlinks")
 	a := flag.Int("A", 0, "Return this many lines after the matching line")
 	b := flag.Int("B", 0, "Return this many lines before the matching line")
+	ig := flag.String("ignore-dir", "", "Comma separated list of directories to ignore (eg. --ignore-dir=vendor,node_modules)")
 	flag.Parse()
 
 	before = *b
@@ -43,6 +60,8 @@ func main() {
 	inverse = *v
 	fileNameOnly = *l
 	followSyms = *f
+	ignoreDirs = strings.Split(*ig, ",")
+	ignoreDirs = append(ignoreDirs, config.IgnoreDirs...)
 
 	// When inverse, before and after don't make sense. Ignore them.
 	if inverse {
@@ -103,13 +122,22 @@ func stdInSearch(search string) {
 	}
 }
 
+// DirFilter returns true if the file should be kept, false if it should be discarded.
+func DirFilter(path, dirName string) bool {
+	if inarray.Strings(dirName, ignoreDirs) >= 0 {
+		return false
+	}
+
+	return fileUtil.DefaultDirectoryFilter(path, dirName)
+}
+
 func fileSystemSearch(search, path string) {
 	if !fileUtil.IsDir(path) {
 		os.Exit(1)
 	}
 
 	// Extract file list
-	files := fileUtil.DirToArray(path, followSyms, fileUtil.DefaultFileFilter)
+	files := fileUtil.DirToArray(path, followSyms, fileUtil.DefaultFileFilter, DirFilter)
 	active := 0
 
 	c := make(chan bool)
@@ -245,4 +273,15 @@ func println(lines ...string) {
 	outlock.Lock()
 	fmt.Println(strings.Join(lines, "\n"))
 	outlock.Unlock()
+}
+
+func getConfig(fileName string) Config {
+	var c Config
+	var tmp map[string][]string
+
+	data, _ := ioutil.ReadFile(fileName)
+	json.Unmarshal(data, &tmp)
+
+	c.IgnoreDirs = tmp["ignore-dir"]
+	return c
 }

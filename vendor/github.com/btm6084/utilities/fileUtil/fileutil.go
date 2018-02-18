@@ -66,7 +66,7 @@ func IsSymlink(fileName string) bool {
 }
 
 // DirToArray will flatten a directory into a simple list of files that can be iterated over.
-func DirToArray(dir string, followSyms bool, filter func(string, string) bool) []string {
+func DirToArray(dir string, followSyms bool, fileFilter func(string, string) bool, dirFilter func(string, string) bool) []string {
 	var results []string
 
 	files, err := ioutil.ReadDir(dir)
@@ -87,18 +87,32 @@ func DirToArray(dir string, followSyms bool, filter func(string, string) bool) [
 				continue
 			}
 
-			subFiles := DirToArray(file, followSyms, filter)
+			// Run the directory filter
+			if !dirFilter(dir, f.Name()) {
+				continue
+			}
+
+			subFiles := DirToArray(file, followSyms, fileFilter, dirFilter)
 			results = append(results, subFiles...)
 			continue
 		}
 
 		// filter should return true if the file should be kept, false if it should be discarded.
-		if filter(dir, f.Name()) {
+		if fileFilter(dir, f.Name()) {
 			results = append(results, file)
 		}
 	}
 
 	return results
+}
+
+// DefaultDirectoryFilter returns true if the file should be kept, false if it should be discarded.
+func DefaultDirectoryFilter(path, dirName string) bool {
+	if dirName == ".git" {
+		return false
+	}
+
+	return true
 }
 
 // DefaultFileFilter returns true if the file should be kept, false if it should be discarded.
