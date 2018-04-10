@@ -13,6 +13,7 @@ import (
 	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/btm6084/utilities/fileUtil"
 	"github.com/btm6084/utilities/inarray"
@@ -23,12 +24,17 @@ var (
 	after        int
 	insensitive  bool
 	inverse      bool
+	isTerminal   bool
 	fileNameOnly bool
 	followSyms   bool
 
 	fileNameColor   = "\x1b[96m%s\x1b[0m"
 	searchTermColor = "\x1b[30;42m$1\x1b[0m"
 	lineNumColor    = "\x1b[93m%d%s\x1b[0m"
+
+	fileNameNoColor   = "\x1b[96m%s\x1b[0m"
+	searchTermNoColor = "\x1b[30;42m$1\x1b[0m"
+	lineNumNoColor    = "\x1b[93m%d%s\x1b[0m"
 
 	ignoreDirs []string
 
@@ -68,6 +74,12 @@ func main() {
 	if inverse {
 		before = 0
 		after = 0
+	}
+
+	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+		isTerminal = true
+	} else {
+		isTerminal = false
 	}
 
 	search, path := getArgs()
@@ -195,18 +207,23 @@ func processFile(fileName, search string, c chan bool) {
 
 	matches, hasMatches := searchFile(file, search)
 
+	var fileNameOut = fileNameNoColor
+	if isTerminal {
+		fileNameOut = fileNameColor
+	}
+
 	switch true {
 	case hasMatches && inverse && fileNameOnly:
 		c <- true
 		return
 	case !hasMatches && inverse && fileNameOnly:
-		fileOut := fmt.Sprintf(fileNameColor, strings.TrimLeft(fileName, "./"))
+		fileOut := fmt.Sprintf(fileNameOut, strings.TrimLeft(fileName, "./"))
 		println(strings.TrimLeft(fileOut, "./"))
 
 		c <- true
 		return
 	case hasMatches && !inverse && fileNameOnly:
-		fileOut := fmt.Sprintf(fileNameColor, strings.TrimLeft(fileName, "./"))
+		fileOut := fmt.Sprintf(fileNameOut, strings.TrimLeft(fileName, "./"))
 		println(strings.TrimLeft(fileOut, "./"))
 
 		c <- true
@@ -215,7 +232,7 @@ func processFile(fileName, search string, c chan bool) {
 		c <- true
 		return
 	default:
-		fileOut := fmt.Sprintf(fileNameColor, strings.TrimLeft(fileName, "./"))
+		fileOut := fmt.Sprintf(fileNameOut, strings.TrimLeft(fileName, "./"))
 		println(strings.TrimLeft(fileOut, "./"), strings.Join(matches, ""))
 
 		c <- true
@@ -261,6 +278,16 @@ func processLines(lines []string, search string) ([]string, bool) {
 		}
 	}
 
+	var lineNumOut = lineNumNoColor
+	if isTerminal {
+		lineNumOut = lineNumColor
+	}
+
+	var searchTermOut = searchTermNoColor
+	if isTerminal {
+		searchTermOut = searchTermColor
+	}
+
 	for _, k := range matched {
 		start := k - before
 		if start < 0 {
@@ -274,18 +301,18 @@ func processLines(lines []string, search string) ([]string, bool) {
 
 		for i, l := range lines[start:end] {
 			n := start + i
-			lnOut := fmt.Sprintf(lineNumColor, n+1, ":")
+			lnOut := fmt.Sprintf(lineNumOut, n+1, ":")
 
 			switch true {
 			case inverse:
 				break
 			case n < k:
-				lnOut = fmt.Sprintf(lineNumColor, n+1, "-")
+				lnOut = fmt.Sprintf(lineNumOut, n+1, "-")
 			case n == k:
-				l = sre.ReplaceAllString(lines[k], searchTermColor)
-				lnOut = fmt.Sprintf(lineNumColor, n+1, ":")
+				l = sre.ReplaceAllString(lines[k], searchTermOut)
+				lnOut = fmt.Sprintf(lineNumOut, n+1, ":")
 			case n > k:
-				lnOut = fmt.Sprintf(lineNumColor, n+1, "+")
+				lnOut = fmt.Sprintf(lineNumOut, n+1, "+")
 			}
 
 			matches = append(matches, fmt.Sprintf("%s %s\n", lnOut, l))
