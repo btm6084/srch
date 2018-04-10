@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 
@@ -115,10 +116,34 @@ func getArgs() (string, string) {
 }
 
 func stdInSearch(search string) {
-	matches, _ := searchFile(os.Stdin, search)
+	var lines []string
+	var lastWrite time.Time
+	writeInterval := time.Millisecond * 100
 
-	if len(matches) > 0 {
-		println(strings.Join(matches, ""))
+	s := bufio.NewScanner(os.Stdin)
+
+	for s.Scan() {
+		// Buffer any input
+		lines = append(lines, s.Text())
+
+		// Periodically flush the buffer.
+		if time.Since(lastWrite) > writeInterval {
+			lastWrite = time.Now()
+			matches, _ := processLines(lines, search)
+			lines = []string{}
+			if len(matches) > 0 {
+				println(strings.Join(matches, ""))
+			}
+
+		}
+	}
+
+	// Flush the buffer.
+	if len(lines) > 0 {
+		matches, _ := processLines(lines, search)
+		if len(matches) > 0 {
+			println(strings.Join(matches, ""))
+		}
 	}
 }
 
@@ -200,16 +225,30 @@ func processFile(fileName, search string, c chan bool) {
 
 func searchFile(file *os.File, search string) ([]string, bool) {
 	var lines []string
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		println(err.Error())
+		return nil, false
+	}
+
+	return processLines(lines, search)
+}
+
+func processLines(lines []string, search string) ([]string, bool) {
 	var matches []string
 	var matched []int
 	var hasMatches bool
 
 	sre := regexp.MustCompile(search)
-	lineNum := 0
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
+	for lineNum, line := range lines {
 		lineMatches := sre.Match([]byte(line))
 		hasMatches = hasMatches || lineMatches
 
@@ -220,15 +259,6 @@ func searchFile(file *os.File, search string) ([]string, bool) {
 		if inverse && !lineMatches {
 			matched = append(matched, lineNum)
 		}
-
-		lines = append(lines, line)
-
-		lineNum++
-	}
-
-	if err := scanner.Err(); err != nil {
-		println(err.Error())
-		return nil, false
 	}
 
 	for _, k := range matched {
