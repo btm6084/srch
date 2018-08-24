@@ -15,28 +15,28 @@
 			"revisionTime": "2018-02-18T23:28:56Z"
 		},
 		{
-			"checksumSHA1": "V/quM7+em2ByJbWBLOsEwnY3j/Q=",
+			"checksumSHA1": "a58zUNtDH/gEd6F6KI3FqT2iEo0=",
 			"path": "github.com/mitchellh/go-homedir",
-			"revision": "b8bc1bf767474819792c23f32d8286a45736f1c6",
-			"revisionTime": "2016-12-03T19:45:07Z"
+			"revision": "ae18d6b8b3205b561c79e8e5f69bff09736185f4",
+			"revisionTime": "2018-08-24T00:42:36Z"
 		},
 		{
 			"checksumSHA1": "BGm8lKZmvJbf/YOJLeL1rw2WVjA=",
 			"path": "golang.org/x/crypto/ssh/terminal",
-			"revision": "aabede6cba87e37f413b3e60ebfc214f8eeca1b0",
-			"revisionTime": "2018-08-16T21:30:07Z"
+			"revision": "614d502a4dac94afa3a6ce146bd1736da82514c6",
+			"revisionTime": "2018-07-28T08:01:47Z"
 		},
 		{
-			"checksumSHA1": "7Gocawl8bm27cpAILtuf21xvVD8=",
+			"checksumSHA1": "0YaJxT/qQOqE1/hv9j5oSaMJOUQ=",
 			"path": "golang.org/x/sys/unix",
-			"revision": "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded",
-			"revisionTime": "2018-08-15T07:37:39Z"
+			"revision": "4910a1d54f876d7b22162a85f4d066d3ee649450",
+			"revisionTime": "2018-08-24T09:55:51Z"
 		},
 		{
 			"checksumSHA1": "apLcjhTfa/nKhpXTXjpfIZxVTKQ=",
 			"path": "golang.org/x/sys/windows",
-			"revision": "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded",
-			"revisionTime": "2018-08-15T07:37:39Z"
+			"revision": "4910a1d54f876d7b22162a85f4d066d3ee649450",
+			"revisionTime": "2018-08-24T09:55:51Z"
 		}
 	],
 	"rootPath": "github.com/btm6084/srch"
