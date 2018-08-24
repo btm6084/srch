@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -32,9 +33,9 @@ var (
 	searchTermColor = "\x1b[30;42m$1\x1b[0m"
 	lineNumColor    = "\x1b[93m%d%s\x1b[0m"
 
-	fileNameNoColor   = "\x1b[96m%s\x1b[0m"
-	searchTermNoColor = "\x1b[30;42m$1\x1b[0m"
-	lineNumNoColor    = "\x1b[93m%d%s\x1b[0m"
+	fileNameNoColor   = "%s"
+	searchTermNoColor = "$1"
+	lineNumNoColor    = "%d%s"
 
 	ignoreDirs []string
 
@@ -132,11 +133,19 @@ func stdInSearch(search string) {
 	var lastWrite time.Time
 	writeInterval := time.Millisecond * 100
 
-	s := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewReader(os.Stdin)
 
-	for s.Scan() {
-		// Buffer any input
-		lines = append(lines, s.Text())
+	for {
+		line, err := scanner.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return
+		}
+
+		lines = append(lines, strings.Trim(line, "\n"))
 
 		// Periodically flush the buffer.
 		if time.Since(lastWrite) > writeInterval {
@@ -243,19 +252,18 @@ func processFile(fileName, search string, c chan bool) {
 func searchFile(file *os.File, search string) ([]string, bool) {
 	var lines []string
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewReader(file)
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		lines = append(lines, line)
+	for {
+		line, err := scanner.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				return processLines(lines, search)
+			}
+			return nil, false
+		}
+		lines = append(lines, strings.Trim(line, "\n"))
 	}
-
-	if err := scanner.Err(); err != nil {
-		println(err.Error())
-		return nil, false
-	}
-
-	return processLines(lines, search)
 }
 
 func processLines(lines []string, search string) ([]string, bool) {
@@ -301,17 +309,20 @@ func processLines(lines []string, search string) ([]string, bool) {
 
 		for i, l := range lines[start:end] {
 			n := start + i
-			lnOut := fmt.Sprintf(lineNumOut, n+1, ":")
+			lnOut := ""
+			if isTerminal {
+				lnOut = fmt.Sprintf(lineNumOut, n+1, ":")
+			}
 
 			switch true {
 			case inverse:
 				break
-			case n < k:
+			case n < k && isTerminal:
 				lnOut = fmt.Sprintf(lineNumOut, n+1, "-")
-			case n == k:
+			case n == k && isTerminal:
 				l = sre.ReplaceAllString(lines[k], searchTermOut)
 				lnOut = fmt.Sprintf(lineNumOut, n+1, ":")
-			case n > k:
+			case n > k && isTerminal:
 				lnOut = fmt.Sprintf(lineNumOut, n+1, "+")
 			}
 
